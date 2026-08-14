@@ -1,0 +1,1 @@
+Weapon shop: pistol is free. Other weapons are purchased with coins earned from monsters.

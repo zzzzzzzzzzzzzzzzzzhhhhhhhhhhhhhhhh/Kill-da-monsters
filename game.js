@@ -1,23 +1,91 @@
-const game=document.querySelector('#game'),startScreen=document.querySelector('#startScreen'),gameOver=document.querySelector('#gameOver'),start=document.querySelector('#start'),restart=document.querySelector('#restart'),shopScreen=document.querySelector('#shopScreen'),shopButton=document.querySelector('#shopButton'),closeShop=document.querySelector('#closeShop'),shopGrid=document.querySelector('#shopGrid'),shopCoins=document.querySelector('#shopCoins');
-let health=100,armor=0,ammo=12,kills=0,wave=1,coins=0,playing=false,reloading=false,monsters=[],gun=0,shopOpen=false,mouseX=innerWidth/2,mouseY=innerHeight/2;
-const guns=[['RANGER PISTOL',12,1,0],['MONSTER SMG',30,1,100],['DOOM SHOTGUN',6,3,150],['PHANTOM RIFLE',20,2,200],['THUNDER CANNON',4,6,300],['VOID LASER',18,3,400],['SKULL MINIGUN',60,1,500],['PLASMA BLASTER',10,8,650],['FROST SMG',36,2,750],['INFERNO SHOTGUN',8,5,850],['RAIL RIFLE',5,10,1000],['GRAVITY LAUNCHER',3,12,1200],['ARC CANNON',12,7,1400],['NOVA RIFLE',24,5,1600],['TITAN MINIGUN',80,2,2000],['SINGULARITY GUN',2,25,2500]];
+const game=document.getElementById('game');
+const startScreen=document.getElementById('startScreen');
+const gameOver=document.getElementById('gameOver');
+const start=document.getElementById('start');
+const restart=document.getElementById('restart');
+const shopScreen=document.getElementById('shopScreen');
+const shopButton=document.getElementById('shopButton');
+const closeShop=document.getElementById('closeShop');
+const shopGrid=document.getElementById('shopGrid');
+const shopCoins=document.getElementById('shopCoins');
+
+let health=100,armor=0,ammo=12,kills=0,wave=1,coins=0;
+let playing=false,reloading=false,shopOpen=false,gun=0;
+let monsters=[];
+let mouseX=innerWidth/2,mouseY=innerHeight/2;
+
+const guns=[
+ ['RANGER PISTOL',12,1,0],['MONSTER SMG',30,1,100],['DOOM SHOTGUN',6,3,150],['PHANTOM RIFLE',20,2,200],
+ ['THUNDER CANNON',4,6,300],['VOID LASER',18,3,400],['SKULL MINIGUN',60,1,500],['PLASMA BLASTER',10,8,650],
+ ['FROST SMG',36,2,750],['INFERNO SHOTGUN',8,5,850],['RAIL RIFLE',5,10,1000],['GRAVITY LAUNCHER',3,12,1200],
+ ['ARC CANNON',12,7,1400],['NOVA RIFLE',24,5,1600],['TITAN MINIGUN',80,2,2000],['SINGULARITY GUN',2,25,2500]
+];
 const gunKeys=['1','2','3','4','5','6','7','8','q','w','e','t','y','u','i','o'];
-let owned=[true,...Array(15).fill(false)];
-document.addEventListener('mousemove',e=>{mouseX=e.clientX;mouseY=e.clientY;});
-document.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k==='escape'&&shopOpen){closeWeaponShop();return;}if(k==='r')reload();if(k==='b')buyArmor();const i=gunKeys.indexOf(k);if(i>=0)switchGun(i);});
-start.onclick=begin;restart.onclick=begin;shopButton.onclick=openWeaponShop;closeShop.onclick=closeWeaponShop;
-game.addEventListener('mousedown',e=>{if(playing&&!shopOpen&&!e.target.closest('button')&&!e.target.closest('#shopScreen'))shoot(e.clientX,e.clientY);});
-function openWeaponShop(){if(!playing)return;shopOpen=true;shopScreen.classList.remove('hidden');renderShop();}
-function closeWeaponShop(){shopOpen=false;shopScreen.classList.add('hidden');update();}
-function renderShop(){if(!shopGrid)return;if(shopCoins)shopCoins.textContent=coins;shopGrid.innerHTML='';guns.forEach((g,i)=>{const card=document.createElement('div'),isOwned=owned[i],isEquipped=gun===i,canBuy=coins>=g[3];card.className='gun-card '+(isOwned?'owned ':'locked ')+(isEquipped?'selected':'');const actionText=isEquipped?'EQUIPPED':isOwned?'EQUIP':g[3]===0?'FREE':canBuy?'BUY NOW':'LOCKED';card.innerHTML='<div><div class="gun-number">KEY: '+gunKeys[i].toUpperCase()+'</div><div class="gun-name">'+g[0]+'</div><div class="gun-stats">MAG '+g[1]+' · POWER '+g[2]+'</div><div class="gun-price">'+(g[3]===0?'FREE':'💰 '+g[3]+' COINS')+'</div></div><button class="gun-action">'+actionText+'</button>';card.addEventListener('click',()=>buyOrEquipGun(i));shopGrid.appendChild(card);});}
-function buyOrEquipGun(i){if(!playing)return;if(owned[i]){gun=i;ammo=guns[gun][1];document.querySelector('#message').textContent='EQUIPPED: '+guns[i][0];renderShop();update();return;}const price=guns[i][3];if(coins>=price){coins-=price;owned[i]=true;gun=i;ammo=guns[gun][1];document.querySelector('#message').textContent='PURCHASED: '+guns[i][0];renderShop();update();}else{document.querySelector('#message').textContent='NOT ENOUGH COINS! NEED '+price+' COINS';renderShop();}}
-function switchGun(i){if(!playing||reloading||shopOpen)return;if(owned[i]){gun=i;ammo=guns[gun][1];document.querySelector('#message').textContent='EQUIPPED: '+guns[i][0];update();return;}openWeaponShop();}
-function begin(){health=100;armor=0;ammo=12;kills=0;wave=1;coins=0;gun=0;shopOpen=false;owned=[true,...Array(15).fill(false)];playing=true;reloading=false;startScreen.classList.add('hidden');gameOver.classList.add('hidden');shopScreen.classList.add('hidden');monsters.forEach(m=>m.el.remove());monsters=[];spawnWave();renderShop();update();}
-function spawnWave(){for(let i=0;i<wave+2;i++)spawnMonster(i===wave+1&&wave%5===0);}
-function spawnMonster(boss=false){const el=document.createElement('div');el.className='monster'+(boss?' boss':'');el.innerHTML='<div class="head"><i class="eye a"></i><i class="eye b"></i></div><div class="body"></div><div class="arm a"></div><div class="arm b"></div>';const x=8+Math.random()*84,y=18+Math.random()*60;el.style.left=x+'vw';el.style.top=y+'vh';game.appendChild(el);monsters.push({el,x,y,hp:boss?18:2+Math.floor(wave/2),speed:boss?0.008:0.015+Math.random()*0.025,boss});}
-function shoot(targetX=mouseX,targetY=mouseY){if(reloading||ammo<=0||shopOpen)return;ammo--;const muzzle=document.createElement('div');muzzle.className='muzzle';muzzle.style.left=targetX+'px';muzzle.style.top=targetY+'px';game.appendChild(muzzle);setTimeout(()=>muzzle.remove(),90);const alive=monsters.filter(m=>m.hp>0);if(alive.length){const cx=innerWidth/2,cy=innerHeight/2,angle=Math.atan2(targetY-cy,targetX-cx);let target=null,best=Infinity;alive.forEach(m=>{const tx=m.x/100*innerWidth,ty=m.y/100*innerHeight,distance=Math.hypot(tx-cx,ty-cy),a=Math.atan2(ty-cy,tx-cx),diff=Math.abs(Math.atan2(Math.sin(a-angle),Math.cos(a-angle)));if(diff<0.12&&distance<best){best=distance;target=m;}});if(target){target.hp-=guns[gun][2];target.el.classList.add('hit');setTimeout(()=>target.el.classList.remove('hit'),100);if(target.hp<=0){target.el.remove();monsters=monsters.filter(m=>m!==target);kills++;coins+=target.boss?50:5;if(shopOpen)renderShop();}}}if(ammo===0)reload();update();}
-function reload(){if(reloading||ammo===guns[gun][1]||shopOpen)return;reloading=true;document.querySelector('#message').textContent='RELOADING...';setTimeout(()=>{ammo=guns[gun][1];reloading=false;update();},900);}
-function buyArmor(){if(!playing||shopOpen||coins<50)return;coins-=50;armor=Math.min(100,armor+25);document.querySelector('#message').textContent='ARMOR PURCHASED!';update();}
-function update(){const q=s=>document.querySelector(s);if(q('#health'))q('#health').textContent=Math.max(0,health);if(q('#healthBar'))q('#healthBar').style.width=Math.max(0,health)+'%';if(q('#armorBar'))q('#armorBar').style.width=armor+'%';if(q('#armor'))q('#armor').textContent=armor;if(q('#ammo'))q('#ammo').textContent=ammo;if(q('#kills'))q('#kills').textContent=kills;if(q('#wave'))q('#wave').textContent=wave;if(q('#coins'))q('#coins').textContent=coins;if(shopCoins)shopCoins.textContent=coins;if(q('#weaponName'))q('#weaponName').textContent=guns[gun][0];if(q('#reserve'))q('#reserve').textContent=guns[gun][1]*5;if(q('#streakCount'))q('#streakCount').textContent=kills;if(shopOpen){renderShop();return;}if(!playing)return;if(monsters.length===0){wave++;spawnWave();}monsters.forEach(m=>{const dx=50-m.x,dy=50-m.y,dist=Math.hypot(dx,dy);if(dist>8){m.x+=dx/dist*m.speed;m.y+=dy/dist*m.speed;m.el.style.left=m.x+'vw';m.el.style.top=m.y+'vh';}else if(Math.random()<0.025){const damage=m.boss?10:5;if(armor>0)armor=Math.max(0,armor-damage);else health-=damage;if(health<=0)endGame();}});if(reloading)q('#message').textContent='RELOADING...';else q('#message').textContent=guns[gun][0];}
-function endGame(){playing=false;shopOpen=false;shopScreen.classList.add('hidden');document.querySelector('#finalKills').textContent=kills;gameOver.classList.remove('hidden');}
-renderShop();setInterval(()=>{if(playing)update();},40);
+let owned=Array(16).fill(false); owned[0]=true;
+
+function el(id){return document.getElementById(id)}
+function setText(id,value){const x=el(id);if(x)x.textContent=value}
+
+function update(){
+ setText('health',Math.max(0,health));setText('armor',armor);setText('ammo',ammo);setText('kills',kills);setText('wave',wave);setText('coins',coins);setText('weaponName',guns[gun][0]);setText('reserve',guns[gun][1]*5);setText('streakCount',kills);setText('shopCoins',coins);
+ const hb=el('healthBar');if(hb)hb.style.width=Math.max(0,health)+'%';
+ const ab=el('armorBar');if(ab)ab.style.width=armor+'%';
+ if(!playing)return;
+ if(monsters.length===0){wave++;spawnWave()}
+ moveMonsters();
+ setText('message',reloading?'RELOADING...':guns[gun][0]);
+}
+
+function begin(){
+ health=100;armor=0;ammo=12;kills=0;wave=1;coins=0;gun=0;reloading=false;shopOpen=false;
+ owned=Array(16).fill(false);owned[0]=true;monsters.forEach(m=>m.el.remove());monsters=[];playing=true;
+ startScreen.classList.add('hidden');gameOver.classList.add('hidden');shopScreen.classList.add('hidden');
+ spawnWave();update();
+}
+
+function spawnWave(){for(let i=0;i<wave+2;i++)spawnMonster(i===wave+1&&wave%5===0)}
+function spawnMonster(boss){
+ const e=document.createElement('div');e.className='monster'+(boss?' boss':'');
+ e.innerHTML='<div class="head"><i class="eye a"></i><i class="eye b"></i></div><div class="body"></div><div class="arm a"></div><div class="arm b"></div>';
+ const x=8+Math.random()*84,y=18+Math.random()*60;e.style.left=x+'vw';e.style.top=y+'vh';game.appendChild(e);
+ monsters.push({el:e,x,y,hp:boss?18:2+Math.floor(wave/2),speed:boss?0.008:0.015+Math.random()*0.025,boss});
+}
+
+function moveMonsters(){
+ monsters.forEach(m=>{const dx=50-m.x,dy=50-m.y,d=Math.hypot(dx,dy);if(d>8){m.x+=dx/d*m.speed;m.y+=dy/d*m.speed;m.el.style.left=m.x+'vw';m.el.style.top=m.y+'vh'}else if(Math.random()<0.025){const dmg=m.boss?10:5;if(armor>0)armor=Math.max(0,armor-dmg);else health-=dmg;if(health<=0)endGame()}})
+}
+
+function shoot(tx,ty){
+ if(!playing||shopOpen||reloading||ammo<=0)return;ammo--;
+ const muzzle=document.createElement('div');muzzle.className='muzzle';muzzle.style.left=tx+'px';muzzle.style.top=ty+'px';game.appendChild(muzzle);setTimeout(()=>muzzle.remove(),90);
+ const cx=innerWidth/2,cy=innerHeight/2,angle=Math.atan2(ty-cy,tx-cx);let target=null,best=Infinity;
+ monsters.forEach(m=>{const x=m.x/100*innerWidth,y=m.y/100*innerHeight,a=Math.atan2(y-cy,x-cx),diff=Math.abs(Math.atan2(Math.sin(a-angle),Math.cos(a-angle))),d=Math.hypot(x-cx,y-cy);if(diff<0.15&&d<best){best=d;target=m}});
+ if(target){target.hp-=guns[gun][2];target.el.classList.add('hit');setTimeout(()=>target.el.classList.remove('hit'),100);if(target.hp<=0){target.el.remove();monsters=monsters.filter(m=>m!==target);kills++;coins+=target.boss?50:5}}
+ if(ammo===0)reload();update();
+}
+function reload(){if(!playing||shopOpen||reloading||ammo===guns[gun][1])return;reloading=true;setText('message','RELOADING...');setTimeout(()=>{ammo=guns[gun][1];reloading=false;update()},900)}
+function buyArmor(){if(!playing||shopOpen||coins<50)return;coins-=50;armor=Math.min(100,armor+25);update()}
+
+function openWeaponShop(){if(!playing)return;shopOpen=true;shopScreen.classList.remove('hidden');renderShop()}
+function closeWeaponShop(){shopOpen=false;shopScreen.classList.add('hidden');update()}
+function renderShop(){
+ if(!shopGrid)return;shopGrid.innerHTML='';setText('shopCoins',coins);
+ guns.forEach((g,i)=>{const c=document.createElement('div');c.className='gun-card '+(owned[i]?'owned ':'locked ')+(gun===i?'selected':'');
+ const action=gun===i?'EQUIPPED':owned[i]?'EQUIP':coins>=g[3]?'BUY NOW':'LOCKED';
+ c.innerHTML='<div><div class="gun-number">KEY: '+gunKeys[i].toUpperCase()+'</div><div class="gun-name">'+g[0]+'</div><div class="gun-stats">MAG '+g[1]+' · POWER '+g[2]+'</div><div class="gun-price">'+(g[3]?'💰 '+g[3]+' COINS':'FREE')+'</div></div><button class="gun-action">'+action+'</button>';
+ c.onclick=()=>buyOrEquip(i);shopGrid.appendChild(c)})
+}
+function buyOrEquip(i){
+ if(owned[i]){gun=i;ammo=guns[gun][1];setText('message','EQUIPPED: '+guns[i][0]);renderShop();update();return}
+ if(coins>=guns[i][3]){coins-=guns[i][3];owned[i]=true;gun=i;ammo=guns[i][1];setText('message','PURCHASED: '+guns[i][0]);renderShop();update()}
+ else setText('message','NOT ENOUGH COINS! NEED '+guns[i][3]+' COINS')
+}
+function switchGun(i){if(!playing||shopOpen||reloading)return;if(owned[i]){gun=i;ammo=guns[i][1];update()}else openWeaponShop()}
+function endGame(){playing=false;shopOpen=false;shopScreen.classList.add('hidden');setText('finalKills',kills);gameOver.classList.remove('hidden')}
+
+document.addEventListener('mousemove',e=>{mouseX=e.clientX;mouseY=e.clientY});
+document.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k==='escape'&&shopOpen)closeWeaponShop();else if(k==='r')reload();else if(k==='b')buyArmor();else{const i=gunKeys.indexOf(k);if(i>=0)switchGun(i)}});
+game.addEventListener('mousedown',e=>{if(playing&&!shopOpen&&!e.target.closest('button'))shoot(e.clientX,e.clientY)});
+start.addEventListener('click',begin);restart.addEventListener('click',begin);shopButton.addEventListener('click',openWeaponShop);closeShop.addEventListener('click',closeWeaponShop);
+
+setInterval(()=>{if(playing&&!shopOpen)update()},40);

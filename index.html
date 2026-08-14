@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KILL DA MONSTERS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game">
+    <div id="hud">
+      <div class="brand">KILL DA MONSTERS</div>
+      <div class="stats"><span>❤️ <b id="health">100</b></span><span>💥 <b id="ammo">12</b>/12</span><span>☠️ <b id="kills">0</b></span><span>🌊 Wave <b id="wave">1</b></span></div>
+    </div>
+    <div id="crosshair">+</div>
+    <div id="message">Click to enter the arena</div>
+    <div id="weapon"><div class="gun-body"></div><div class="gun-barrel"></div></div>
+    <div id="help">WASD move · Mouse aim · Left click fire · R reload · Survive the waves</div>
+    <div id="startScreen"><h1>KILL DA MONSTERS</h1><p>A first-person monster survival prototype.</p><button id="start">START GAME</button></div>
+    <div id="gameOver" class="hidden"><h1>YOU GOT MONSTERED</h1><p>Final kills: <b id="finalKills">0</b></p><button id="restart">TRY AGAIN</button></div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>

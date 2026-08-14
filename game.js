@@ -2,10 +2,15 @@ const game=document.querySelector('#game'),
 startScreen=document.querySelector('#startScreen'),
 gameOver=document.querySelector('#gameOver'),
 start=document.querySelector('#start'),
-restart=document.querySelector('#restart');
+restart=document.querySelector('#restart'),
+shopScreen=document.querySelector('#shopScreen'),
+shopButton=document.querySelector('#shopButton'),
+closeShop=document.querySelector('#closeShop'),
+shopGrid=document.querySelector('#shopGrid'),
+shopCoins=document.querySelector('#shopCoins');
 
 let health=100, armor=0, ammo=12, kills=0, wave=1, coins=0;
-let playing=false, reloading=false, monsters=[], gun=0;
+let playing=false, reloading=false, monsters=[], gun=0, shopOpen=false;
 
 const guns=[
   ['RANGER PISTOL',12,1,0],
@@ -44,6 +49,11 @@ document.addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   keys[k]=true;
 
+  if(k==='escape' && shopOpen){
+    closeWeaponShop();
+    return;
+  }
+
   if(k==='r') reload();
   if(k==='b') buyArmor();
 
@@ -60,16 +70,104 @@ document.addEventListener('keyup',e=>{
 
 start.onclick=begin;
 restart.onclick=begin;
+shopButton.onclick=openWeaponShop;
+closeShop.onclick=closeWeaponShop;
 
 game.addEventListener('mousedown',e=>{
-  if(playing && !e.target.closest('button')){
+  if(playing && !shopOpen && !e.target.closest('button') && !e.target.closest('#shopScreen')){
     shoot();
   }
 });
 
+function openWeaponShop(){
+  if(!playing) return;
+  shopOpen=true;
+  shopScreen.classList.remove('hidden');
+  renderShop();
+}
+
+function closeWeaponShop(){
+  shopOpen=false;
+  shopScreen.classList.add('hidden');
+  update();
+}
+
+function renderShop(){
+  if(!shopGrid) return;
+
+  if(shopCoins)
+    shopCoins.textContent=coins;
+
+  shopGrid.innerHTML='';
+
+  guns.forEach((g,i)=>{
+    const card=document.createElement('div');
+    const isOwned=owned[i];
+    const isEquipped=gun===i;
+    const canBuy=coins>=g[3];
+
+    card.className='gun-card '+
+      (isOwned?'owned ':'locked ')+
+      (isEquipped?'selected':'');
+
+    const actionText=
+      isEquipped ? 'EQUIPPED' :
+      isOwned ? 'EQUIP' :
+      g[3]===0 ? 'FREE' :
+      canBuy ? 'BUY NOW' : 'LOCKED';
+
+    card.innerHTML=
+      '<div>'+
+        '<div class="gun-number">KEY: '+gunKeys[i].toUpperCase()+'</div>'+
+        '<div class="gun-name">'+g[0]+'</div>'+
+        '<div class="gun-stats">MAG '+g[1]+' · POWER '+g[2]+'</div>'+
+        '<div class="gun-price">'+(g[3]===0?'FREE':'💰 '+g[3]+' COINS')+'</div>'+
+      '</div>'+
+      '<button class="gun-action">'+actionText+'</button>';
+
+    card.addEventListener('click',()=>buyOrEquipGun(i));
+
+    shopGrid.appendChild(card);
+  });
+}
+
+function buyOrEquipGun(i){
+
+  if(!playing) return;
+
+  if(owned[i]){
+    gun=i;
+    ammo=guns[gun][1];
+    document.querySelector('#message').textContent=
+      'EQUIPPED: '+guns[i][0];
+    renderShop();
+    update();
+    return;
+  }
+
+  const price=guns[i][3];
+
+  if(coins>=price){
+    coins-=price;
+    owned[i]=true;
+    gun=i;
+    ammo=guns[gun][1];
+
+    document.querySelector('#message').textContent=
+      'PURCHASED: '+guns[i][0];
+
+    renderShop();
+    update();
+  }else{
+    document.querySelector('#message').textContent=
+      'NOT ENOUGH COINS! NEED '+price+' COINS';
+    renderShop();
+  }
+}
+
 function switchGun(i){
 
-  if(!playing || reloading) return;
+  if(!playing || reloading || shopOpen) return;
 
   if(owned[i]){
     gun=i;
@@ -82,27 +180,7 @@ function switchGun(i){
     return;
   }
 
-  const price=guns[i][3];
-
-  if(coins>=price){
-
-    coins-=price;
-    owned[i]=true;
-    gun=i;
-    ammo=guns[gun][1];
-
-    document.querySelector('#message').textContent=
-      'PURCHASED: '+guns[i][0];
-
-    update();
-
-  }else{
-
-    document.querySelector('#message').textContent=
-      'LOCKED: '+guns[i][0]+' - NEED '+price+' COINS';
-
-    update();
-  }
+  openWeaponShop();
 }
 
 function begin(){
@@ -114,6 +192,7 @@ function begin(){
   wave=1;
   coins=0;
   gun=0;
+  shopOpen=false;
 
   owned=[
     true,false,false,false,
@@ -127,11 +206,13 @@ function begin(){
 
   startScreen.classList.add('hidden');
   gameOver.classList.add('hidden');
+  shopScreen.classList.add('hidden');
 
   monsters.forEach(m=>m.el.remove());
   monsters=[];
 
   spawnWave();
+  renderShop();
   update();
 }
 
@@ -179,7 +260,7 @@ function spawnMonster(boss=false){
 
 function shoot(){
 
-  if(reloading || ammo<=0) return;
+  if(reloading || ammo<=0 || shopOpen) return;
 
   ammo--;
 
@@ -216,9 +297,9 @@ function shoot(){
 
       kills++;
 
-      // Normal monster = 5 coins
-      // Boss = 50 coins
       coins+=target.boss?50:5;
+
+      if(shopOpen) renderShop();
     }
   }
 
@@ -231,7 +312,7 @@ function shoot(){
 
 function reload(){
 
-  if(reloading || ammo===guns[gun][1]) return;
+  if(reloading || ammo===guns[gun][1] || shopOpen) return;
 
   reloading=true;
 
@@ -251,7 +332,7 @@ function reload(){
 
 function buyArmor(){
 
-  if(!playing || coins<50) return;
+  if(!playing || shopOpen || coins<50) return;
 
   coins-=50;
 
@@ -297,6 +378,9 @@ function update(){
   if(coinEl)
     coinEl.textContent=coins;
 
+  if(shopCoins)
+    shopCoins.textContent=coins;
+
   if(weaponName)
     weaponName.textContent=guns[gun][0];
 
@@ -305,6 +389,11 @@ function update(){
 
   if(streak)
     streak.textContent=kills;
+
+  if(shopOpen){
+    renderShop();
+    return;
+  }
 
   if(!playing) return;
 
@@ -356,11 +445,15 @@ function update(){
 function endGame(){
 
   playing=false;
+  shopOpen=false;
+  shopScreen.classList.add('hidden');
 
   document.querySelector('#finalKills').textContent=kills;
 
   gameOver.classList.remove('hidden');
 }
+
+renderShop();
 
 setInterval(()=>{
   if(playing)
